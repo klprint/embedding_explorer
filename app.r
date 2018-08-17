@@ -33,8 +33,15 @@ ui <- fluidPage(
             br(),
             p("Draw a rectangular selection around a cluster of cells, you are interested in."),
             p("The app will calculate a Kruskal-Wallis-Wilcox test for all genes within this cluster."),
-            p("When the calculation is finished, see the table below the plot.")
+            p("Click on the \"Gene enrichment analysis\" tab and wait until the calculation finished.")
           ),
+          tabPanel("Gene enrichment analysis",
+              h4("Gene enrichment analysis results"),
+              p("Select a gene below. It's expression will be plottet in the tab \"Expression\"."),
+              h5("Attention"),
+              p("If there is no table below this text, select cells in the \"Embedding\t tab and _wait_ here. The calculation can take a couple of seconds to minutes."),
+              DT::dataTableOutput("test")
+            ),
           tabPanel("Expression",
             plotOutput("exprsPlot", height = 650)
 
@@ -42,11 +49,8 @@ ui <- fluidPage(
         ),
       br(),
       h5("Number of cells selected: "),
-      textOutput("brushed"),
-      br(),
-      h4("Gene enrichment analysis results"),
-      p("Select a gene below. It's expression will be plottet in the tab \"Expression\" above."),
-      DT::dataTableOutput("test")
+      textOutput("brushed")
+      
 
 
 
