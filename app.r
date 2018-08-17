@@ -37,7 +37,7 @@ ui <- fluidPage(
                        height = 650),
             br(),
             p("Draw a rectangular selection around a cluster of cells, you are interested in."),
-            p("The app will calculate a Kruskal-Wallis-Wilcox test for all genes within this cluster."),
+            p("The app will calculate a Kruskal-Wallis-Wilcox test for all genes expressed within this cluster."),
             p("Click on the \"Gene enrichment analysis\" tab and wait until the calculation finished.")
           ),
           tabPanel("Expressed genes",
