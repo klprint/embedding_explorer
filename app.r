@@ -22,7 +22,7 @@ ui <- fluidPage(
         h4("Server status"),
         conditionalPanel(
             condition="($('html').hasClass('shiny-busy'))",
-            h5("R is calculating"))
+            h5("R is busy"))
         ),
 
 
