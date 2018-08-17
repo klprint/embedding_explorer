@@ -35,15 +35,22 @@ ui <- fluidPage(
             p("The app will calculate a Kruskal-Wallis-Wilcox test for all genes within this cluster."),
             p("Click on the \"Gene enrichment analysis\" tab and wait until the calculation finished.")
           ),
+          tabPanel("Expressed genes",
+            br(),
+            p("Use this drop-down menu to select a gene. You can also click inside the menu and hit once delete, then you can enter a gene yourself."),
+            uiOutput("selectGenes"),
+            br(),
+            plotOutput("exprsPlot", height = 650)
+          ),
           tabPanel("Gene enrichment analysis",
               h4("Gene enrichment analysis results"),
-              p("Select a gene below. It's expression will be plottet in the tab \"Expression\"."),
+              p("Select a gene below. It's expression will be plottet in the tab \"Gene enrichment plot\"."),
               h5("Attention"),
               p("If there is no table below this text, select cells in the \"Embedding\t tab and _wait_ here. The calculation can take a couple of seconds to minutes."),
               DT::dataTableOutput("test")
             ),
-          tabPanel("Expression",
-            plotOutput("exprsPlot", height = 650)
+          tabPanel("Gene enrichment plot",
+            plotOutput("gePlot", height = 650)
 
           )
         ),
@@ -59,6 +66,7 @@ ui <- fluidPage(
   )
 
 )
+
 
 ###################################################################################################
 ############# Server
@@ -251,7 +259,7 @@ server <- function(input, output) {
     })
 
 
-  output$exprsPlot = renderPlot({
+  output$gePlot = renderPlot({
 
       s = input$test_rows_selected
 
@@ -278,7 +286,44 @@ server <- function(input, output) {
 
     })
 
+  ####
+  # Expression plot for selected genes
+  ####
+
+  # Creating a drop-down menu for the genes:
+  output$selectGenes = renderUI({
+
+      if(is.null(exprs())){
+        h4("Please upload an expression table!")
+      }else{
+        genes.in.dataset = row.names(exprs())
+
+        selectInput("selectGenes", "Select a gene", choices = genes.in.dataset, selected = genes.in.dataset[1])
+      }
+      
+    })
+
+  output$exprsPlot = renderPlot({
+
+    if(is.null(input$selectGenes)){
+      return(NULL)
+    }else{
+      em = embedding()
+      em$geneExprs = exprs()[input$selectGenes, ]
+
+      ggplot(em, aes(x = Dim1, y = Dim2, color = geneExprs)) +
+        geom_point() +
+        scale_color_continuous(high = "red", low = "gray", name = input$selectGenes)
+    }
+
+  })
+
+
+
 }
+
+
+
 
 
 
