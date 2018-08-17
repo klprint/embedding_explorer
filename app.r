@@ -96,7 +96,7 @@ server <- function(input, output) {
             header = F,
             row.names = 1,
             sep = ","
-          )
+          )[,1:2]
 
         colnames(df) = c("Dim1", "Dim2")
 
