@@ -11,8 +11,12 @@ ui <- fluidPage(
 
     sidebarPanel(
         fileInput("embedfile", label = h3("Embedding table")),
+        p("The embedding should be a csv file with rows x colums: cells x dimensions."),
+        p("Make sure that the cellIDs are the first column (row names) and no column names should be present."),
         br(),
-        fileInput("expfile", label = h3("Expression table"))
+        fileInput("expfile", label = h3("Expression table")),
+        p("The expression table should be a CSV file: geneIDs x cellIDs"),
+        p("First column: GeneIDs, first row: CellIDs")
 
         ),
 
@@ -25,7 +29,11 @@ ui <- fluidPage(
       tabsetPanel(
           tabPanel("Embedding",
             plotOutput("embeddingPlot", brush = brushOpts(id = "brush", delayType = "debounce", delay = "1000"),
-                       height = 650)
+                       height = 650),
+            br(),
+            p("Draw a rectangular selection around a cluster of cells, you are interested in."),
+            p("The app will calculate a Kruskal-Wallis-Wilcox test for all genes within this cluster."),
+            p("When the calculation is finished, see the table below the plot.")
           ),
           tabPanel("Expression",
             plotOutput("exprsPlot", height = 650)
@@ -33,13 +41,12 @@ ui <- fluidPage(
           )
         ),
       br(),
-      p("Number of cells selected: "),
+      h5("Number of cells selected: "),
       textOutput("brushed"),
       br(),
-      DT::dataTableOutput("test"),
-      br(),
-      p("Select a gene above. It's expression will be plotted below:"),
-      br()
+      h4("Gene enrichment analysis results"),
+      p("Select a gene below. It's expression will be plottet in the tab \"Expression\" above."),
+      DT::dataTableOutput("test")
 
 
 
@@ -192,7 +199,7 @@ server <- function(input, output) {
   # Returns the gene with the highest summed expression in the selection
   output$test = DT::renderDataTable({
 
-    if(is.null(embedding())){
+    if(is.null(embedding()) | is.null(exprs())){
       return(NULL)
     }else{
       return(DT::datatable(wilcox.out(),
@@ -221,7 +228,6 @@ server <- function(input, output) {
       for(gene in row.names(exprs.selected)){
 
         ex.selected = exprs.selected[gene, ]
-        print(ex.selected)
         ex.background = exprs.background[gene, ]
 
         test.out = wilcox.test(x = ex.selected , y = ex.background, alternative = "greater", paired = FALSE)
