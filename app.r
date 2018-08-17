@@ -16,8 +16,13 @@ ui <- fluidPage(
         br(),
         fileInput("expfile", label = h3("Expression table")),
         p("The expression table should be a CSV file: geneIDs x cellIDs"),
-        p("First column: GeneIDs, first row: CellIDs")
-
+        p("First column: GeneIDs, first row: CellIDs"),
+        br(),
+        br(),
+        h4("Server status"),
+        conditionalPanel(
+            condition="($('html').hasClass('shiny-busy'))",
+            h5("R is calculating"))
         ),
 
 
@@ -43,16 +48,24 @@ ui <- fluidPage(
             plotOutput("exprsPlot", height = 650)
           ),
           tabPanel("Gene enrichment analysis",
-              h4("Gene enrichment analysis results"),
-              p("Select a gene below. It's expression will be plottet in the tab \"Gene enrichment plot\"."),
-              h5("Attention"),
-              p("If there is no table below this text, select cells in the \"Embedding\t tab and _wait_ here. The calculation can take a couple of seconds to minutes."),
-              DT::dataTableOutput("test")
-            ),
-          tabPanel("Gene enrichment plot",
-            plotOutput("gePlot", height = 650)
+            tabsetPanel(
+              tabPanel("Results table",
+                h4("Gene enrichment analysis results"),
+                p("Select a gene below. It's expression will be plottet in the tab \"Gene enrichment plot\"."),
+                h5("Attention"),
+                p("If there is no table below this text, select cells in the \"Embedding\t tab and _wait_ here. The calculation can take a couple of seconds to minutes."),
+                DT::dataTableOutput("test")
+              ),
+              tabPanel("Gene enrichment plot",
+                plotOutput("gePlot", height = 650)
+            )
+              
+
+            )
 
           )
+
+
         ),
       br(),
       h5("Number of cells selected: "),
