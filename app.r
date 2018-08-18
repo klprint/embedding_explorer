@@ -5,7 +5,7 @@ library(ggplot2)
 ############# User interface
 ###################################################################################################
 ui <- fluidPage(
-  titlePanel("Custom cluster analysis"),
+  titlePanel("Embedding explorer"),
 
   sidebarLayout(
 
