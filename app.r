@@ -10,13 +10,24 @@ ui <- fluidPage(
   sidebarLayout(
 
     sidebarPanel(
-        fileInput("embedfile", label = h3("Embedding table")),
-        p("The embedding should be a csv file with rows x colums: cells x dimensions."),
-        p("Make sure that the cellIDs are the first column (row names) and no column names should be present."),
-        br(),
-        fileInput("expfile", label = h3("Expression table")),
-        p("The expression table should be a CSV file: geneIDs x cellIDs"),
-        p("First column: GeneIDs, first row: CellIDs"),
+        radioButtons("input",
+          label = h4("Kind of input"),
+          choices = list("Raw input" = "raw",
+                         "Embedding + Expression" = "embedding")
+        ),
+        conditionalPanel(condition = "input.input == 'raw'",
+          fileInput("rawfile", label = h3("Raw UMI counts")),
+          p("CSV file: rows x columns = genes x cells"),
+          p("First column = geneIDs, first row = cellIDs")
+        ),
+        conditionalPanel(condition = "input.input == 'embedding'",
+          fileInput("embedfile", label = h3("Embedding table")),
+          p("The embedding should be a csv file with rows x colums: cells x dimensions."),
+          p("Make sure that the cellIDs are the first column (row names) and no column names should be present."),
+          br(),
+          fileInput("expfile", label = h3("Expression table")),
+          p("The expression table should be a CSV file: geneIDs x cellIDs"),
+          p("First column: GeneIDs, first row: CellIDs")),
         br(),
         br(),
         h4("Server status"),
@@ -32,13 +43,25 @@ ui <- fluidPage(
       # verbatimTextOutput("value"),
       # br(),
       tabsetPanel(
+          tabPanel("Dimensional Reduction",
+            p("If raw UMI counts are provided, use this tab to do the dimensional reduction"),
+            tabsetPanel(
+              tabPanel("QC",
+                uiOutput("QCtab"),
+                plotOutput("n_genes_vs_n_umi", height = 400)
+              )
+            )
+          ),
           tabPanel("Embedding",
             plotOutput("embeddingPlot", brush = brushOpts(id = "brush", delayType = "debounce", delay = "1000"),
                        height = 650),
             br(),
             p("Draw a rectangular selection around a cluster of cells, you are interested in."),
             p("The app will calculate a Kruskal-Wallis-Wilcox test for all genes expressed within this cluster."),
-            p("Click on the \"Gene enrichment analysis\" tab and wait until the calculation finished.")
+            p("Click on the \"Gene enrichment analysis\" tab and wait until the calculation finished."),
+            br(),
+            h5("Number of cells selected: "),
+            textOutput("brushed")
           ),
           tabPanel("Expressed genes",
             br(),
@@ -66,10 +89,8 @@ ui <- fluidPage(
           )
 
 
-        ),
-      br(),
-      h5("Number of cells selected: "),
-      textOutput("brushed")
+        )
+      
       
 
 
@@ -86,7 +107,7 @@ ui <- fluidPage(
 ###################################################################################################
 
 
-# Define server logic required to draw a histogram ----
+# Define server logic 
 server <- function(input, output) {
   options(shiny.maxRequestSize=500*1024^2)
 
@@ -159,19 +180,115 @@ server <- function(input, output) {
 
     })
 
-  output$value = renderPrint({
-      exprs.selected = exprs()[,selected.cells.bool()]
-      exprs.selected = exprs.selected[rowSums(exprs.selected > 0) > 0, ]
+  raw.umi = reactive({
+      infile = input$rawfile
 
-      return(head(exprs.selected))
+      if(is.null(infile)){
+        return(NULL)
+      }else{
+        df = read.table(infile$datapath,
+          header = T,
+          row.names = 1,
+          sep = ",")
+      }
+
+      return(as.matrix(df))
+
     })
 
   ####
   # Testing whether the reading works
   ####
 
+  # output$value = renderPrint({
+  #     exprs.selected = exprs()[,selected.cells.bool()]
+  #     exprs.selected = exprs.selected[rowSums(exprs.selected > 0) > 0, ]
+
+  #     return(head(exprs.selected))
+  #   })
+
+  ####
+  # QC stats
+  ####
+
+  n_genes = reactive({
+
+      if(is.null(raw.umi())){
+        return(NULL)
+      }
+      umi = raw.umi()
+
+      expressed.genes = umi > 0
+      expressed.genes = colSums(expressed.genes)
+
+      return(as.vector(expressed.genes))
+    })
+
+  n_umi = reactive({
+
+      if(is.null(raw.umi())){
+        return(NULL)
+      }
+      umi = raw.umi()
+
+      umi.counts.per.cell = colSums(umi)
+
+      return(as.vector(umi.counts.per.cell))
+    })
 
 
+  output$QCtab = renderUI({
+      if(is.null(raw.umi())){
+        return(NULL)
+      }else{
+        fluidRow(
+                 column(4, uiOutput("selectMinMaxUMI")),
+                 column(4, uiOutput("selectMinMaxGenes"))
+                )
+      }
+    })
+
+  output$selectMinMaxUMI = renderUI({
+      if(is.null(n_umi())){
+        return(NULL)
+      }else{
+        sliderInput("MinMaxUMI", label = h3("UMI range"), min = min(n_umi()), max = max(n_umi()), value = c(min(n_umi()), max(n_umi())))
+      }
+      
+    })
+
+    output$selectMinMaxGenes = renderUI({
+      if(is.null(n_umi())){
+        return(NULL)
+      }else{
+        sliderInput("MinMaxGenes", label = h3("Gene range"), min = min(n_genes()), max = max(n_genes()), value = c(min(n_genes()), max(n_genes())))
+      }
+      
+    })
+
+    output$n_genes_vs_n_umi = renderPlot({
+      if(is.null(raw.umi)){
+        return(NULL)
+      }else{
+
+        colBool = ifelse(n_umi() >= input$MinMaxUMI[1] & n_umi() <= input$MinMaxUMI[2] & 
+                         n_genes() >= input$MinMaxGenes[1] & n_genes() <= input$MinMaxGenes[2],
+                         "black", "gray")
+
+        return(
+        ggplot(NULL, aes(x = n_umi(), y = n_genes())) +
+          geom_point(color = colBool) +
+          xlab("nUMI") +
+          ylab("nGenes") +
+          geom_vline(aes(xintercept = input$MinMaxUMI[1])) +
+          geom_vline(aes(xintercept = input$MinMaxUMI[2])) +
+          geom_hline(aes(yintercept = input$MinMaxGenes[1])) +
+          geom_hline(aes(yintercept = input$MinMaxGenes[2]))
+        )
+      }
+      
+    })
+      
 
   ####
   # Making the embedding plot
