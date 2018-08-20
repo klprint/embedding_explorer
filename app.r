@@ -45,12 +45,7 @@ ui <- fluidPage(
       tabsetPanel(
           tabPanel("Dimensional Reduction",
             p("If raw UMI counts are provided, use this tab to do the dimensional reduction"),
-            tabsetPanel(
-              tabPanel("QC",
-                uiOutput("QCtab"),
-                plotOutput("n_genes_vs_n_umi", height = 400)
-              )
-            )
+            uiOutput("QCtab")
           ),
           tabPanel("Embedding",
             plotOutput("embeddingPlot", brush = brushOpts(id = "brush", delayType = "debounce", delay = "1000"),
@@ -241,10 +236,17 @@ server <- function(input, output) {
       if(is.null(raw.umi())){
         return(NULL)
       }else{
-        fluidRow(
-                 column(4, uiOutput("selectMinMaxUMI")),
-                 column(4, uiOutput("selectMinMaxGenes"))
-                )
+        tabsetPanel(
+          tabPanel("QC",
+            fluidRow(
+                   column(4, uiOutput("selectMinMaxUMI")),
+                   column(4, uiOutput("selectMinMaxGenes"))
+                  ),
+            plotOutput("n_genes_vs_n_umi", height = 400)
+          )
+        
+        )
+        
       }
     })
 
